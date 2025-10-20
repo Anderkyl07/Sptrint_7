@@ -1,15 +1,33 @@
 package scooter.tests;
 
-
 import scooter.api.BaseApiTest;
 import io.qameta.allure.Description;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.Response;
+import org.junit.After;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 
 public class CourierTest extends BaseApiTest {
+
+    private List<String> couriersToDelete = new ArrayList<>();
+
+    @After
+    public void tearDown() {
+        // Удаляем всех созданных курьеров после каждого теста
+        for (String courierId : couriersToDelete) {
+            try {
+                courierApi.deleteCourier(courierId);
+            } catch (Exception e) {
+                System.out.println("Failed to delete courier: " + courierId);
+            }
+        }
+        couriersToDelete.clear();
+    }
 
     @Test
     @DisplayName("Успешное создание курьера")
@@ -25,9 +43,9 @@ public class CourierTest extends BaseApiTest {
                 .statusCode(201)
                 .body("ok", equalTo(true));
 
-        // Удаляем созданного курьера
+        // Сохраняем ID для удаления после теста
         String courierId = courierApi.getCourierId(login, password);
-        courierApi.deleteCourier(courierId);
+        couriersToDelete.add(courierId);
     }
 
     @Test
@@ -40,16 +58,16 @@ public class CourierTest extends BaseApiTest {
         // Создаем первого курьера
         courierApi.createCourier(login, password, firstName);
 
+        // Сохраняем ID для удаления после теста
+        String courierId = courierApi.getCourierId(login, password);
+        couriersToDelete.add(courierId);
+
         // Пытаемся создать второго с тем же логином
         Response response = courierApi.createCourier(login, "different_password", "different_name");
 
         response.then()
                 .statusCode(409)
                 .body("message", equalTo("Этот логин уже используется. Попробуйте другой."));
-
-        // Удаляем созданного курьера
-        String courierId = courierApi.getCourierId(login, password);
-        courierApi.deleteCourier(courierId);
     }
 
     @Test
@@ -85,16 +103,16 @@ public class CourierTest extends BaseApiTest {
         // Создаем курьера
         courierApi.createCourier(login, password, firstName);
 
+        // Сохраняем ID для удаления после теста
+        String courierId = courierApi.getCourierId(login, password);
+        couriersToDelete.add(courierId);
+
         // Логинимся
         Response response = courierApi.loginCourier(login, password);
 
         response.then()
                 .statusCode(200)
                 .body("id", notNullValue());
-
-        // Удаляем курьера
-        String courierId = courierApi.getCourierId(login, password);
-        courierApi.deleteCourier(courierId);
     }
 
     @Test
@@ -108,16 +126,16 @@ public class CourierTest extends BaseApiTest {
         // Создаем курьера
         courierApi.createCourier(login, password, firstName);
 
+        // Сохраняем ID для удаления после теста
+        String courierId = courierApi.getCourierId(login, password);
+        couriersToDelete.add(courierId);
+
         // Пытаемся логиниться с неверным паролем
         Response response = courierApi.loginCourier(login, "wrong_password");
 
         response.then()
                 .statusCode(404)
                 .body("message", equalTo("Учетная запись не найдена"));
-
-        // Удаляем курьера
-        String courierId = courierApi.getCourierId(login, password);
-        courierApi.deleteCourier(courierId);
     }
 
     @Test
